@@ -5,8 +5,11 @@ from sklearn.metrics import f1_score, log_loss
 
 
 class RandomForestClassifier:
-    def __init__(self, max_depth=1000, verbose=2):
-        self.model = RFClassifier(max_depth=max_depth, verbose=verbose)
+    def __init__(self, max_depth=1000, verbose=2, model=None):
+        if model:
+            self.model = model
+        else:
+            self.model = RFClassifier(max_depth=max_depth, verbose=verbose)
 
     def fit(self, x, y, save=False, filename=None):
         """
@@ -22,9 +25,6 @@ class RandomForestClassifier:
                 pickle.dump(self.model, open(filename, "wb"))
             else:
                 raise ValueError("A filename is required to save the model.")
-
-    def load(self, filename):
-        self.model = pickle.load(open(filename), "rb")
 
     def accuracy(self, x, y):
         """

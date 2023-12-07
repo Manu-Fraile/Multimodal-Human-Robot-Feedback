@@ -29,9 +29,9 @@ GENERAL PARAMETERS
     :param RF_INPUT_X_DATA: Input X for Random Forest Classifier.
     :param RF_INPUT_Y_DATA: Labels Y for Random Forest Classifier.
 """
-TRAIN = True
-MODEL_NAME = ''
-DL_MODEL = 'transformer'
+TRAIN = False
+MODEL_NAME = 'randomforest'
+DL_MODEL = 'randomforest'
 INPUT_X_DATA = '../data/custom-data/input_x.npy'
 INPUT_Y_DATA = '../data/custom-data/input_y.npy'
 RF_INPUT_X_DATA = '../data/custom-data/RFinput_x.npy'
@@ -41,6 +41,7 @@ RF_INPUT_Y_DATA = '../data/custom-data/RFinput_y.npy'
 DEEP LEARNING TRAINING PARAMETERS
     :param LEARNING_RATE
     :param EPOCHS
+    :param BATCH_SIZE
 """
 LEARNING_RATE = 0.0001
 EPOCHS = 19
@@ -49,7 +50,10 @@ BATCH_SIZE = 128
 """
 TIME SERIES ENCODER PARAMETERS
     :param NUM_LAYERS
-    :param NUM_HEADS    
+    :param NUM_HEADS
+    :param M: Input dimensionality.
+    :param W: Input length.
+    :param D: Transformer dimensionality.  
 """
 NUM_LAYERS = 1
 NUM_HEADS = 16
@@ -64,7 +68,7 @@ INCEPTIONTIME PARAMETERS
 NUM_CLASSES = 3
 
 
-if __name__ == "__main__":
+def main():
     now = datetime.now()
     filename_nowdate = now.strftime("%Y%m%d_%H%M%S")
 
@@ -85,8 +89,10 @@ if __name__ == "__main__":
         filename_nowdate = 'TS_' + filename_nowdate
 
         if TRAIN:
-            encoderTransformer = TimeSeriesEncoder(num_layers=NUM_LAYERS, m_model=M, d_model=D, w_model=W, num_heads=NUM_HEADS,
-                                           dff=256, input_vocab_size=30000, maximum_position_encoding=80, rate=0.1)
+            encoderTransformer = TimeSeriesEncoder(num_layers=NUM_LAYERS, m_model=M, d_model=D, w_model=W,
+                                                   num_heads=NUM_HEADS,
+                                                   dff=256, input_vocab_size=30000, maximum_position_encoding=80,
+                                                   rate=0.1)
 
             model = encoderTransformer.build_model(inp=x[0])
             print("\n")
@@ -114,7 +120,8 @@ if __name__ == "__main__":
                 os.makedirs(results_dir)
 
             plot_loss(fit_report, save=True, filename="../results/tsencoder/plots/" + filename_nowdate + "/loss.png")
-            plot_accuracy(fit_report, save=True, filename="../results/tsencoder/plots/" + filename_nowdate + "/accuracy.png")
+            plot_accuracy(fit_report, save=True,
+                          filename="../results/tsencoder/plots/" + filename_nowdate + "/accuracy.png")
 
         else:
             model = tf.keras.models.load_model('../results/final_results/tsencoder/models/' + MODEL_NAME)
@@ -151,7 +158,8 @@ if __name__ == "__main__":
 
             ITclassifier = InceptionTimeClassifier()
             metrics = ['accuracy', 'mse', Precision(), Recall()]
-            ITmodel = ITclassifier.build_model(input_shape=(W, M), nb_classes=NUM_CLASSES, learning_rate=LEARNING_RATE, metrics=metrics)
+            ITmodel = ITclassifier.build_model(input_shape=(W, M), nb_classes=NUM_CLASSES, learning_rate=LEARNING_RATE,
+                                               metrics=metrics)
             ITreport = ITmodel.fit(x=x_train, y=y_train, batch_size=BATCH_SIZE, epochs=EPOCHS,
                                    validation_data=(x_val, y_val), callbacks=mcp_save)
 
@@ -161,7 +169,8 @@ if __name__ == "__main__":
                 os.makedirs(results_dir)
 
             plot_loss(ITreport, save=True, filename="../results/inceptiontime/plots/" + filename_nowdate + "/loss.png")
-            plot_accuracy(ITreport, save=True, filename="../results/inceptiontime/plots/" + filename_nowdate + "/accuracy.png")
+            plot_accuracy(ITreport, save=True,
+                          filename="../results/inceptiontime/plots/" + filename_nowdate + "/accuracy.png")
         else:
             ITmodel = tf.keras.models.load_model('../results/inceptiontime/models/' + MODEL_NAME)
 
@@ -186,7 +195,7 @@ if __name__ == "__main__":
             clf = RandomForestClassifier(max_depth=10000, verbose=2)
             clf.fit(x_train, y_train, save=True, filename=filename)
         else:
-            clf = RandomForestClassifier.load(filename=filename)
+            clf = RandomForestClassifier(model=pickle.load(open(filename, "rb")))
 
         accuracy = clf.accuracy(x_test, y_test)
         y_pred = clf.predictions(x_test)
@@ -202,3 +211,7 @@ if __name__ == "__main__":
 
         with open('../results/rfc/predictions/randomforest.npy', 'wb') as f:
             np.save(f, y_pred)
+
+
+if __name__ == "__main__":
+    main()
